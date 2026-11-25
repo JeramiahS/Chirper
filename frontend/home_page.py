@@ -30,7 +30,7 @@ def _search_user_dialog():
 
 
 def render_home_page():
-    header_columns = streamlit.columns([1, 5])
+    header_columns = streamlit.columns(2, vertical_alignment="center")
     with header_columns[0]:
         streamlit.image(str(LOGO_PATH), width=90)
     with header_columns[1]:
