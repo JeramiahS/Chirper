@@ -36,7 +36,7 @@ def render_home_page():
     with header_columns[1]:
         streamlit.title("Chirper")
 
-    sidebar, feed = streamlit.columns([1, 3])
+    sidebar, feed = streamlit.columns([30, 70])
     with sidebar:
         streamlit.subheader(f"@{streamlit.session_state.username}")
         if streamlit.button("👤 My profile", use_container_width=True):

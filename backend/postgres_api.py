@@ -45,30 +45,46 @@ def reply_to_reply(parent_reply_id, author_id, content):
             )
 
 
-def _toggle_relationship(table, user_id, post_id):
+def like_post(user_id, post_id):
     with get_database_connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
-                f"DELETE FROM {table} WHERE user_id = %s AND post_id = %s",
+                "DELETE FROM likes WHERE user_id = %s AND post_id = %s",
                 (user_id, post_id),
             )
             if cursor.rowcount == 0:
                 cursor.execute(
-                    f"INSERT INTO {table} (user_id, post_id) VALUES (%s, %s)",
+                    "INSERT INTO likes (user_id, post_id) VALUES (%s, %s)",
                     (user_id, post_id),
                 )
 
 
-def like_post(user_id, post_id):
-    _toggle_relationship("likes", user_id, post_id)
-
-
 def repost_post(user_id, post_id):
-    _toggle_relationship("reposts", user_id, post_id)
+    with get_database_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM reposts WHERE user_id = %s AND post_id = %s",
+                (user_id, post_id),
+            )
+            if cursor.rowcount == 0:
+                cursor.execute(
+                    "INSERT INTO reposts (user_id, post_id) VALUES (%s, %s)",
+                    (user_id, post_id),
+                )
 
 
 def bookmark_post(user_id, post_id):
-    _toggle_relationship("bookmarks", user_id, post_id)
+    with get_database_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM bookmarks WHERE user_id = %s AND post_id = %s",
+                (user_id, post_id),
+            )
+            if cursor.rowcount == 0:
+                cursor.execute(
+                    "INSERT INTO bookmarks (user_id, post_id) VALUES (%s, %s)",
+                    (user_id, post_id),
+                )
 
 
 def follow_user(follower_id, follows_id):
@@ -130,33 +146,55 @@ def fetch_user_posts(user_id):
             return cursor.fetchall()
 
 
-def _fetch_related_posts(table, user_id):
+def fetch_user_liked_posts(user_id):
     with get_database_connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
-                f"""
+                """
                 SELECT posts.post_id, users.username, posts.content
-                FROM {table}
-                JOIN posts ON posts.post_id = {table}.post_id
+                FROM likes
+                JOIN posts ON posts.post_id = likes.post_id
                 JOIN users ON users.user_id = posts.author_id
-                WHERE {table}.user_id = %s
+                WHERE likes.user_id = %s
                 ORDER BY posts.post_id DESC
                 """,
-                user_id
+                (user_id,),
             )
             return cursor.fetchall()
 
 
-def fetch_user_liked_posts(user_id):
-    return _fetch_related_posts("likes", user_id)
-
-
 def fetch_user_reposted_posts(user_id):
-    return _fetch_related_posts("reposts", user_id)
+    with get_database_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT posts.post_id, users.username, posts.content
+                FROM reposts
+                JOIN posts ON posts.post_id = reposts.post_id
+                JOIN users ON users.user_id = posts.author_id
+                WHERE reposts.user_id = %s
+                ORDER BY posts.post_id DESC
+                """,
+                (user_id,),
+            )
+            return cursor.fetchall()
 
 
 def fetch_user_bookmarked_posts(user_id):
-    return _fetch_related_posts("bookmarks", user_id)
+    with get_database_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT posts.post_id, users.username, posts.content
+                FROM bookmarks
+                JOIN posts ON posts.post_id = bookmarks.post_id
+                JOIN users ON users.user_id = posts.author_id
+                WHERE bookmarks.user_id = %s
+                ORDER BY posts.post_id DESC
+                """,
+                (user_id,),
+            )
+            return cursor.fetchall()
 
 
 def fetch_user_comments(user_id):
@@ -169,7 +207,7 @@ def fetch_user_comments(user_id):
                 WHERE replies.author_id = %s
                 ORDER BY replies.reply_id DESC
                 """,
-                (user_id)
+                (user_id,),
             )
             return cursor.fetchall()
 
