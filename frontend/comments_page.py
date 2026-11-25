@@ -4,11 +4,11 @@ import backend.postgres_api as postgres
 from frontend.home_page import render_header, render_sidebar
 from frontend.post_components import render_post_card
 
+streamlit.set_page_config(layout="wide")
 
 def render_comments_page():
     with streamlit.container(horizontal_alignment="center", width="stretch"):
-        render_header()
-        sidebar, content = streamlit.columns([30, 70], width=1024)
+        sidebar, content = streamlit.columns([30, 70], width="stretch")
         with sidebar:
             render_sidebar(comments_page=True)
 
