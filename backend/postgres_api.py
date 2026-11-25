@@ -189,7 +189,7 @@ def fetch_comments_for_post(post_id):
                 FROM comments
                 JOIN users ON users.user_id = comments.author_id
                 WHERE comments.post_id = %s
-                ORDER BY comments.comment_id ASC
+                ORDER BY comments.comment_id
                 """,
                 (post_id,),
             )
