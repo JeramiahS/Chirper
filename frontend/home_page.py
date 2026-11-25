@@ -11,11 +11,9 @@ LOGO_PATH = Path(__file__).parent / "icons" / "chirper_icon.png"
 streamlit.set_page_config(layout="wide")
 
 def render_header():
-    left, center, right = streamlit.columns([1, 1, 1])
-    with center:
-        with streamlit.container(horizontal=True, horizontal_alignment="center", vertical_alignment="center"):
-            streamlit.image(str(LOGO_PATH), width=90)
-            streamlit.title("Chirper")
+    with streamlit.container(horizontal=True, horizontal_alignment="center", vertical_alignment="center"):
+        streamlit.image(str(LOGO_PATH), width=90)
+        streamlit.title("Chirper")
 
 
 @streamlit.dialog("Create a post")
@@ -66,6 +64,7 @@ def _write_comment_dialog():
 
 
 def render_sidebar(comments_page=False):
+    render_header()
     with streamlit.container():
         streamlit.subheader(f"@{streamlit.session_state.username}")
         if streamlit.button("👤 My profile", use_container_width=True):
@@ -114,8 +113,7 @@ def _search_user_dialog():
 
 def render_home_page():
     with streamlit.container(horizontal_alignment="center", width="stretch"):
-        render_header()
-        sidebar, feed = streamlit.columns([30, 70], width=1024)
+        sidebar, feed = streamlit.columns([30, 70], width="stretch")
         with sidebar:
             render_sidebar()
 
