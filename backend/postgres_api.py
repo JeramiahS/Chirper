@@ -15,7 +15,7 @@ def create_user(username, password):
                 "INSERT INTO users (username, password) VALUES (%s, %s) RETURNING user_id",
                 (username, password),
             )
-            return cursor.fetchone()[0]
+            return cursor.fetchone()
 
 
 def create_post(author_id, content):
