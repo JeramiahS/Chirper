@@ -4,6 +4,7 @@ import frontend.home_page as home_page
 import frontend.login_page as login_page
 import frontend.registration_page as registration_page
 import frontend.user_profile_page as user_profile_page
+import frontend.comments_page as comments_page
 
 
 streamlit.session_state.setdefault("logged_in", False)
@@ -16,6 +17,8 @@ if not streamlit.session_state.logged_in:
         login_page.render_login_page()
 elif streamlit.session_state.page == "profile":
     user_profile_page.render_user_profile_page()
+elif streamlit.session_state.page == "comments":
+    comments_page.render_comments_page()
 else:
     streamlit.session_state.page = "home"
     home_page.render_home_page()

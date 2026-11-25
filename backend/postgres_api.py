@@ -15,15 +15,25 @@ def create_user(username, password):
                 "INSERT INTO users (username, password) VALUES (%s, %s) RETURNING user_id",
                 (username, password),
             )
-            return cursor.fetchone()
+            return cursor.fetchone()[0]
 
 
 def create_post(author_id, content):
     with get_database_connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
-                "INSERT INTO posts (author_id, content) VALUES (%s, %s)",
+                "INSERT INTO posts (author_id, content) VALUES (%s, %s) RETURNING post_id",
                 (author_id, content),
+            )
+            return cursor.fetchone()[0]
+
+
+def create_comment(post_id, author_id, content):
+    with get_database_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO comments (post_id, author_id, content) VALUES (%s, %s, %s)",
+                (post_id, author_id, content),
             )
 
 
@@ -131,13 +141,73 @@ def fetch_posts(limit=10, offset=0):
             return cursor.fetchall()
 
 
+def fetch_posts_with_counts(limit=10, offset=0):
+    with get_database_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT posts.post_id, users.username, posts.content,
+                    (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.post_id),
+                    (SELECT COUNT(*) FROM comments WHERE comments.post_id = posts.post_id),
+                    (SELECT COUNT(*) FROM reposts WHERE reposts.post_id = posts.post_id),
+                    (SELECT COUNT(*) FROM bookmarks WHERE bookmarks.post_id = posts.post_id)
+                FROM posts
+                JOIN users ON users.user_id = posts.author_id
+                ORDER BY posts.post_id DESC
+                LIMIT %s OFFSET %s
+                """,
+                (limit, offset),
+            )
+            return cursor.fetchall()
+
+
+def fetch_post_by_id(post_id):
+    with get_database_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT posts.post_id, users.username, posts.content,
+                    (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.post_id),
+                    (SELECT COUNT(*) FROM comments WHERE comments.post_id = posts.post_id),
+                    (SELECT COUNT(*) FROM reposts WHERE reposts.post_id = posts.post_id),
+                    (SELECT COUNT(*) FROM bookmarks WHERE bookmarks.post_id = posts.post_id)
+                FROM posts
+                JOIN users ON users.user_id = posts.author_id
+                WHERE posts.post_id = %s
+                """,
+                (post_id,),
+            )
+            return cursor.fetchone()
+
+
+def fetch_comments_for_post(post_id):
+    with get_database_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT comments.comment_id, users.username, comments.content
+                FROM comments
+                JOIN users ON users.user_id = comments.author_id
+                WHERE comments.post_id = %s
+                ORDER BY comments.comment_id ASC
+                """,
+                (post_id,),
+            )
+            return cursor.fetchall()
+
+
 def fetch_user_posts(user_id):
     with get_database_connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT posts.post_id, users.username, posts.content
-                FROM posts JOIN users ON users.user_id = posts.author_id
+                SELECT posts.post_id, users.username, posts.content,
+                    (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.post_id),
+                    (SELECT COUNT(*) FROM comments WHERE comments.post_id = posts.post_id),
+                    (SELECT COUNT(*) FROM reposts WHERE reposts.post_id = posts.post_id),
+                    (SELECT COUNT(*) FROM bookmarks WHERE bookmarks.post_id = posts.post_id)
+                FROM posts
+                JOIN users ON users.user_id = posts.author_id
                 WHERE posts.author_id = %s
                 ORDER BY posts.post_id DESC
                 """,
@@ -151,7 +221,11 @@ def fetch_user_liked_posts(user_id):
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT posts.post_id, users.username, posts.content
+                SELECT posts.post_id, users.username, posts.content,
+                    (SELECT COUNT(*) FROM likes AS post_likes WHERE post_likes.post_id = posts.post_id),
+                    (SELECT COUNT(*) FROM comments WHERE comments.post_id = posts.post_id),
+                    (SELECT COUNT(*) FROM reposts WHERE reposts.post_id = posts.post_id),
+                    (SELECT COUNT(*) FROM bookmarks WHERE bookmarks.post_id = posts.post_id)
                 FROM likes
                 JOIN posts ON posts.post_id = likes.post_id
                 JOIN users ON users.user_id = posts.author_id
@@ -168,7 +242,11 @@ def fetch_user_reposted_posts(user_id):
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT posts.post_id, users.username, posts.content
+                SELECT posts.post_id, users.username, posts.content,
+                    (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.post_id),
+                    (SELECT COUNT(*) FROM comments WHERE comments.post_id = posts.post_id),
+                    (SELECT COUNT(*) FROM reposts AS post_reposts WHERE post_reposts.post_id = posts.post_id),
+                    (SELECT COUNT(*) FROM bookmarks WHERE bookmarks.post_id = posts.post_id)
                 FROM reposts
                 JOIN posts ON posts.post_id = reposts.post_id
                 JOIN users ON users.user_id = posts.author_id
@@ -185,7 +263,11 @@ def fetch_user_bookmarked_posts(user_id):
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT posts.post_id, users.username, posts.content
+                SELECT posts.post_id, users.username, posts.content,
+                    (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.post_id),
+                    (SELECT COUNT(*) FROM comments WHERE comments.post_id = posts.post_id),
+                    (SELECT COUNT(*) FROM reposts WHERE reposts.post_id = posts.post_id),
+                    (SELECT COUNT(*) FROM bookmarks AS post_bookmarks WHERE post_bookmarks.post_id = posts.post_id)
                 FROM bookmarks
                 JOIN posts ON posts.post_id = bookmarks.post_id
                 JOIN users ON users.user_id = posts.author_id
@@ -202,10 +284,10 @@ def fetch_user_comments(user_id):
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT users.username, replies.content
-                FROM replies JOIN users ON users.user_id = replies.author_id
-                WHERE replies.author_id = %s
-                ORDER BY replies.reply_id DESC
+                SELECT users.username, comments.content
+                FROM comments JOIN users ON users.user_id = comments.author_id
+                WHERE comments.author_id = %s
+                ORDER BY comments.comment_id DESC
                 """,
                 (user_id,),
             )
