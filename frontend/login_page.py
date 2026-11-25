@@ -5,7 +5,7 @@ if "logged_in" not in streamlit.session_state:
     streamlit.session_state.logged_in = False
 
 
-def login_page():
+def render_login_page():
     streamlit.title("Chirper")
 
     # Use a form so the page doesn't rerun on every keystroke
@@ -14,9 +14,10 @@ def login_page():
         password = streamlit.text_input("Password", type="password")
         submit = streamlit.form_submit_button("Log In")
 
+        # TODO: Replace logic to see if a user in the database matches the provided username then compare passwords
         if submit:
             # Replace with streamlit.secrets or a secure database lookup in production
-            if username == "admin" and password == "password123":
+            if username == "admin" and password == "admin123":
                 streamlit.session_state.logged_in = True
                 streamlit.rerun()
             else:
@@ -30,10 +31,5 @@ def logout():
 
 # Gatekeeper: Stop execution if not logged in
 if not streamlit.session_state.logged_in:
-    login_page()
+    render_login_page()
     streamlit.stop()
-
-# --- Protected App Content Below ---
-streamlit.sidebar.button("Log Out", on_click=logout)
-streamlit.title("Welcome to the Dashboard")
-streamlit.write("You are viewing protected content.")
